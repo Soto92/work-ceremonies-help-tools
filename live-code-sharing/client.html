@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Live Editor - test.js</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      #status {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      .connected {
+        background: #4caf50;
+        color: white;
+      }
+      .disconnected {
+        background: #f44336;
+        color: white;
+      }
+      #editor {
+        width: 100%;
+        height: 300px;
+        font-family: monospace;
+        font-size: 14px;
+        background: #f9f9f9;
+        border: 1px solid #ccc;
+        padding: 10px;
+        resize: vertical;
+        margin-bottom: 10px;
+      }
+      #logs {
+        height: 150px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Editing: <code>test.js</code></h1>
+    <div id="status" class="disconnected">Disconnected</div>
+    <textarea id="editor" placeholder="Loading file..."></textarea>
+    <div id="logs"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      const editor = document.getElementById("editor");
+      const logs = document.getElementById("logs");
+      const status = document.getElementById("status");
+
+      function log(msg) {
+        logs.innerHTML += `[${new Date().toLocaleTimeString()}] ${msg}<br>`;
+        logs.scrollTop = logs.scrollHeight;
+      }
+
+      socket.on("connect", () => {
+        status.className = "connected";
+        status.textContent = "Connected";
+        log("Connected to server");
+        socket.emit("loadFile", "test.js");
+      });
+
+      socket.on("disconnect", () => {
+        status.className = "disconnected";
+        status.textContent = "Disconnected";
+        log("Disconnected from server");
+      });
+
+      socket.on("fileContent", ({ filename, content }) => {
+        editor.value = content || "";
+        log(`Loaded ${filename}`);
+      });
+
+      socket.on("saveSuccess", ({ filename }) => {
+        log(`✅ Saved: ${filename}`);
+      });
+
+      socket.on("saveError", ({ filename, error }) => {
+        log(`❌ Failed to save ${filename}: ${error}`);
+      });
+
+      let saveTimer = null;
+      editor.addEventListener("input", () => {
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+          const content = editor.value;
+          socket.emit("saveFile", {
+            filename: "test.js",
+            content,
+          });
+          log("Auto-saving...");
+        }, 2000); // 2 seconds delay
+      });
+    </script>
+  </body>
+</html>
