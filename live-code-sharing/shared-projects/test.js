@@ -1,2 +1,2 @@
 const func = () => {};
-hello
+hello xdf tg

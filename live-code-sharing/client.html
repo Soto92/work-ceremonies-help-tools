@@ -74,8 +74,14 @@
       });
 
       socket.on("fileContent", ({ filename, content }) => {
-        editor.value = content || "";
-        log(`Loaded ${filename}`);
+        if (!isTyping) {
+          editor.value = content || "";
+          log(`🔄 Synced ${filename} from another client`);
+        } else {
+          log(
+            `⚠ Received update for ${filename}, but skipped due to local typing`
+          );
+        }
       });
 
       socket.on("saveSuccess", ({ filename }) => {
@@ -87,8 +93,17 @@
       });
 
       let saveTimer = null;
+      let isTyping = false;
+      let typingTimer = null;
       editor.addEventListener("input", () => {
+        isTyping = true;
         if (saveTimer) clearTimeout(saveTimer);
+        if (typingTimer) clearTimeout(typingTimer);
+
+        typingTimer = setTimeout(() => {
+          isTyping = false;
+        }, 4000);
+
         saveTimer = setTimeout(() => {
           const content = editor.value;
           socket.emit("saveFile", {
@@ -96,7 +111,7 @@
             content,
           });
           log("Auto-saving...");
-        }, 2000); // 2 seconds delay
+        }, 3000);
       });
     </script>
   </body>
